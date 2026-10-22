@@ -107,7 +107,7 @@ canvas.layer{position:fixed;inset:0;width:100%;height:100%;display:block}
   box-shadow:0 0 0 3px var(--bg)}
 
 #testerBox{position:absolute;pointer-events:auto;display:flex;align-items:center;cursor:text}
-#tester{display:block;width:100%;background:transparent;border:0;outline:0;resize:none;margin:0;padding:0;
+#tester{display:block;width:100%;box-sizing:border-box;background:transparent;border:0;outline:0;resize:none;margin:0;padding:0 2cm;
   color:var(--fg);caret-color:var(--fg);font-size:calc(64pt * var(--k));line-height:1.12;overflow-y:hidden;scrollbar-width:none;
   -webkit-user-select:text;user-select:text}
 #tester::-webkit-scrollbar{display:none}
@@ -521,6 +521,7 @@ function buildHero() {
 function sizeHero() {
   const fs = 80 * PT * K;
   const svg = heroBtn.querySelector("svg");
+  if (!svg) return;   // 로딩 중(ASCETIC을 그리기 전)에 창 크기가 바뀌면 건너뜀 — 그릴 때 다시 크기를 맞춤
   svg.setAttribute("width", (heroAdv / 1000 * fs).toFixed(2));
   svg.setAttribute("height", (1.15 * fs).toFixed(2));
   // 대문자 윗선이 화면 여백에 맞도록 위쪽 빈 공간(200/1000em)만큼 끌어올림
@@ -817,7 +818,8 @@ function layoutP2() {
   const lst = list.getBoundingClientRect();
   const tTop = Math.max(left.bottom, top + mh) + 30 * K + 10;
   const tBottom = (list.classList.contains("docked") ? lst.top : H - 60) - 20;
-  Object.assign(testerBox.style, { left: M + "px", right: M + "px", top: tTop + "px", height: Math.max(60, tBottom - tTop) + "px" });
+  // 입력 시작점은 화면 경계에서 2cm — 이탤릭으로 기울어도 첫 글자 모서리가 잘리지 않도록 상자는 화면 끝까지, 여백은 안쪽 패딩으로
+  Object.assign(testerBox.style, { left: "0px", right: "0px", top: tTop + "px", height: Math.max(60, tBottom - tTop) + "px" });
   fitTester();
 }
 
