@@ -48,7 +48,7 @@ canvas.layer{position:fixed;inset:0;width:100%;height:100%;display:block}
 #fontList li{display:flex;justify-content:flex-end}
 #fontList .item{display:block;position:relative;font-size:calc(48pt * var(--k));line-height:calc(54pt * var(--k));
   letter-spacing:calc(-0.3pt * var(--k));white-space:nowrap;transform-origin:100% 50%;
-  transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .3s ease}
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .3s ease,font-size .35s cubic-bezier(.2,.8,.2,1),line-height .35s cubic-bezier(.2,.8,.2,1)}
 #fontList .item .arrow{position:absolute;right:100%;top:50%;width:.62em;height:.34em;margin-right:.18em;
   transform:translate(.25em,-50%);opacity:0;transition:opacity .2s ease,transform .28s cubic-bezier(.2,.8,.2,1)}
 #fontList .item .arrow path{fill:none;stroke:currentColor;stroke-width:1.1;vector-effect:non-scaling-stroke}
@@ -60,7 +60,10 @@ canvas.layer{position:fixed;inset:0;width:100%;height:100%;display:block}
 #fontList .bl{display:inline-block;width:0;height:0;vertical-align:baseline}
 #fontList.docked{top:auto;bottom:calc(var(--M) + 44px + env(safe-area-inset-bottom,0px))}
 #fontList.docked .item{font-size:calc(32pt * var(--k));line-height:calc(36pt * var(--k));letter-spacing:calc(-0.2pt * var(--k))}
-#fontList.docked .item.current{opacity:.3}
+/* 체험 페이지: 고른 폰트는 42pt · Medium으로 강조 (이미 고른 폰트라 호버 확대·화살표 없음) */
+#fontList.docked .item.current{font-size:calc(42pt * var(--k));line-height:calc(48pt * var(--k));cursor:default}
+#fontList.docked .item.current:hover{transform:none}
+#fontList.docked .item.current .arrow{display:none}
 
 /* ---------- 두 번째 페이지 ---------- */
 #p2 .fade{opacity:0;transition:opacity .45s ease}
@@ -97,6 +100,9 @@ canvas.layer{position:fixed;inset:0;width:100%;height:100%;display:block}
 #weights button{position:relative;opacity:.32;transition:opacity .2s}
 #weights button:hover{opacity:.7}
 #weights button[aria-pressed="true"]{opacity:1}
+/* Light 모드: 굵기 선택 UI는 흐림 없이 모두 #000000 (선택은 아래 점으로 표시) */
+body:not(.night) #weights button{opacity:1;color:#000000}
+body:not(.night) #weights button[aria-pressed="true"]::after{background:#000000}
 #weights button[aria-pressed="true"]::after{content:"";position:absolute;left:50%;bottom:-8px;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--fg)}
 .italicRow{display:flex;align-items:center;gap:14px;justify-content:center}
 #italicRow{align-self:stretch}
@@ -128,21 +134,22 @@ canvas.layer{position:fixed;inset:0;width:100%;height:100%;display:block}
 /* ---------- HUD ---------- */
 #hud{position:fixed;inset:0;z-index:9;pointer-events:none}
 #hudHome{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);pointer-events:auto;
-  font-family:"AsceticLine-Bold",system-ui,sans-serif;font-size:16pt;letter-spacing:normal;padding:4px 8px;line-height:1;transition:opacity .2s}
+  font-family:"Ascetic-Bold",system-ui,sans-serif;font-size:16pt;letter-spacing:normal;padding:4px 8px;line-height:1;transition:opacity .2s}
 #hudHome:hover{opacity:.6}
 #hudHome[aria-disabled="true"]{cursor:default}
 #hudHome[aria-disabled="true"]:hover{opacity:1}
 .hudBottom{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom,0px));font-size:max(calc(10pt * var(--k)),9pt);line-height:1;white-space:nowrap;pointer-events:auto}
+#hudBL{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
 #credit{display:flex;align-items:center;gap:12px;font-family:"Ascetic-Light",system-ui,sans-serif}
-#themes{display:flex;gap:6px}
-#themes button{width:1.3em;height:1.3em;display:grid;place-items:center;opacity:.32;transition:opacity .2s}
+#themes{position:absolute;display:flex;align-items:center;gap:8px;font-size:16pt;line-height:1;pointer-events:auto;transition:right .3s ease,top .3s ease}
+#themes button{width:1.25em;height:1.25em;display:grid;place-items:center;opacity:.32;transition:opacity .2s}
 #themes button[aria-pressed="true"]{opacity:1}
 #themes button:hover{opacity:.75}
 #themes svg{width:1em;height:1em}
 #themes svg *{fill:none;stroke:currentColor;stroke-width:1.1;stroke-linecap:round}
 #themes.locked button{opacity:.15;cursor:default}
-#copy{left:50%;transform:translateX(-50%);font-family:"Ascetic-ExtraLight",system-ui,sans-serif}
-@media (max-width:1100px){#copy{bottom:calc(14px + 2.2em + env(safe-area-inset-bottom,0px))}}
+#copy{font-family:"Ascetic-ExtraLight",system-ui,sans-serif}
+#onlyEn{font-family:"Ascetic-Medium",system-ui,sans-serif;font-size:max(calc(12pt * var(--k)),10pt)}
 </style>
 
 <canvas id="bg" class="layer" aria-hidden="true"></canvas>
@@ -211,14 +218,18 @@ canvas.layer{position:fixed;inset:0;width:100%;height:100%;display:block}
 <!-- HUD -->
 <div id="hud">
   <button id="hudHome" aria-label="처음 화면으로">ASCETIC</button>
-  <div id="credit" class="hudBottom L">
+  <div id="hudBL" class="hudBottom L">
+  <div id="credit">
     <span>Direct &amp; Design by Jaeyun Choi</span>
-    <div id="themes" role="group" aria-label="화면 테마">
+  </div>
+  <div id="copy">Copyright @ 2026 Jaeyun Choi, All rights reserved</div>
+  </div>
+  <div id="onlyEn" class="hudBottom R">Only English</div>
+  <!-- 화면 테마: 우상단 (체험 페이지에서는 다운로드 버튼 왼쪽) -->
+  <div id="themes" role="group" aria-label="화면 테마">
       <button data-theme-btn="light" aria-pressed="true" aria-label="Light mode"><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="2.6"/><path d="M7 .8v1.6M7 11.6v1.6M.8 7h1.6M11.6 7h1.6M2.6 2.6l1.1 1.1M10.3 10.3l1.1 1.1M2.6 11.4l1.1-1.1M10.3 3.7l1.1-1.1"/></svg></button>
       <button data-theme-btn="night" aria-pressed="false" aria-label="Night mode"><svg viewBox="0 0 14 14"><path d="M9.6 1.4A5.6 5.6 0 1 0 12.6 9.9 4.6 4.6 0 0 1 9.6 1.4Z"/></svg></button>
     </div>
-  </div>
-  <div id="copy" class="hudBottom">Copyright @ 2026 Jaeyun Choi, All rights reserved</div>
 </div>
 
 <script>
@@ -507,7 +518,7 @@ function buildHero() {
     for (const [k, v] of [["x", 0], ["y", -40], ["width", gd.adv], ["height", 780], ["class", "hit"]]) hit.setAttribute(k, v);
     g.appendChild(hit);
     svg.appendChild(g);
-    const L = { ch, x, adv: gd.adv, g, base, cuts, s: 0, v: 0, target: 0, jolt: 0, jv: 0 };
+    const L = { ch, x, adv: gd.adv, g, base, cuts, s: 0, v: 0, target: 0, jolt: 0, jv: 0, dy: 0 };
     hit.addEventListener("pointerenter", () => { if (state === "p1") { L.target = 1; if (!cuts.length) L.jv = 9; } });
     hit.addEventListener("pointerleave", () => { L.target = 0; });
     heroLetters.push(L);
@@ -527,7 +538,21 @@ function sizeHero() {
   // 대문자 윗선이 화면 여백에 맞도록 위쪽 빈 공간(200/1000em)만큼 끌어올림
   heroBtn.style.marginTop = (-(900 - 700) / 1000 * fs) + "px";
 }
+// 처음 온 사람에게 "만져 보라"는 신호: 접속 3초 뒤 A부터 한 글자씩 위아래로(A~C 한 바퀴 0.6초 = 글자당 약 0.086초), C까지 끝나면 5초 쉬고 반복
+const BOB_DELAY = 3000, BOB_STEP = 600 / 7, BOB_PAUSE = 5000, BOB_H = 110;   // BOB_H: 움직이는 높이(1000 = 글자 크기)
+let bobStart = Infinity;
+function heroBobReset() { bobStart = performance.now() + BOB_DELAY; }
 function heroUpdate(dt) {
+  const now = performance.now(), n = heroLetters.length;
+  let act = -1, bp = 0;
+  if (state === "p1" && now >= bobStart) {
+    const ph = (now - bobStart) % (n * BOB_STEP + BOB_PAUSE);
+    if (ph < n * BOB_STEP) { act = Math.floor(ph / BOB_STEP); bp = (ph % BOB_STEP) / BOB_STEP; }
+  }
+  heroLetters.forEach((L, i) => {
+    const dy = i === act ? -BOB_H * Math.sin(Math.PI * bp) : 0;
+    if (dy !== L.dy) { L.dy = dy; L.g.setAttribute("transform", `translate(${L.x} ${dy.toFixed(2)}) scale(1 -1)`); }
+  });
   for (const L of heroLetters) {
     // 기계 장갑: 약간 튕기며 열리고 닫히는 스프링
     const a = 620 * (L.target - L.s) - 24 * L.v;
@@ -578,7 +603,7 @@ function heroPoints() {
   const sc = r.width / heroAdv, top = r.top;
   return sampleDraw(x => {
     for (const L of heroLetters) {
-      x.save(); x.translate(r.left + L.x * sc, top + 900 * sc); x.scale(sc, -sc);
+      x.save(); x.translate(r.left + L.x * sc, top + (900 + (L.dy || 0)) * sc); x.scale(sc, -sc);
       const gd = G.hero[L.ch];
       x.fill(new Path2D(L.s > .5 ? gd.sten : gd.base));
       x.restore();
@@ -680,11 +705,12 @@ function applyFont() {
   const f = ff(cur.fam, cur.w);
   p2name.style.fontFamily = f;
   $("#p2spec").style.fontFamily = f;
-  weightsEl.style.fontFamily = f;
+  weightsEl.querySelectorAll("button").forEach(b => b.style.fontFamily = ff(cur.fam, b.dataset.w));   // 각 굵기 이름은 자기 굵기로
   tester.style.fontFamily = f;
   tester.style.fontVariationSettings = `"slnt" ${(-10 * cur.ital).toFixed(2)}`;
   weightsEl.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.w === cur.w)));
-  list.querySelectorAll(".item").forEach(b => b.classList.toggle("current", b.dataset.fam === cur.fam));
+  // 체험 페이지 우하단 리스트: 고른 폰트만 Medium으로 굵게
+  list.querySelectorAll(".item").forEach(b => { const on = b.dataset.fam === cur.fam; b.classList.toggle("current", on); b.style.fontFamily = ff(b.dataset.fam, on ? "Medium" : "ExtraLight"); });
   fitTester();
 }
 // 입력 커서가 세로 중앙에 오도록: 글 높이만큼만 textarea를 키우고 상자 안에서 세로 가운데 정렬
@@ -895,11 +921,11 @@ async function goHome() {
 function resetP1() {
   p2.hidden = true; p2name.style.opacity = ""; p2name.style.transition = "";
   list.classList.remove("show", "docked"); list.style.transition = ""; list.style.opacity = ""; list.style.pointerEvents = ""; p1ListPos();
-  list.querySelectorAll(".item").forEach(b => b.classList.remove("current", "held", "press"));
+  list.querySelectorAll(".item").forEach(b => { b.classList.remove("current", "held", "press"); b.style.fontFamily = ff(b.dataset.fam, "ExtraLight"); });
   tester.value = ""; setItal(0); setSize(64); fitTester();
   for (const L of heroLetters) { L.s = 0; L.v = 0; L.target = 0; }
   heroBtn.style.transition = "opacity .6s ease"; heroBtn.style.opacity = "1";
-  state = "p1";
+  state = "p1"; heroBobReset();
 }
 $("#hudHome").addEventListener("click", goHome);
 
@@ -924,13 +950,13 @@ FAMS.forEach(f => {
   b.addEventListener("click", () => h3Set(f.id, H3.w)); h3f.appendChild(b);
 });
 function h3Apply() {
-  h3w.style.fontFamily = ff(H3.fam, H3.w);
+  h3w.querySelectorAll("button").forEach(b => b.style.fontFamily = ff(H3.fam, b.dataset.w));
   h3w.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.w === H3.w)));
   h3f.querySelectorAll("button").forEach(b => { b.style.fontFamily = ff(b.dataset.fam, H3.w); b.setAttribute("aria-pressed", String(b.dataset.fam === H3.fam)); });
 }
 async function h3Set(fam, w) {
   H3.fam = fam; H3.w = w;
-  await Promise.all([font(fam, w), ...FAMS.map(f => font(f.id, w))]);
+  await Promise.all([...WEIGHTS.map(([x]) => font(fam, x)), ...FAMS.map(f => font(f.id, w))]);
   h3Apply();
   if (T3) await T3.setFont(fam, w);
   hidIn.focus({ preventScroll: true });
@@ -962,7 +988,7 @@ async function enterHidden() {
   list.classList.remove("show"); list.style.opacity = "0";
   bgC.style.opacity = ".5";
   threeBox.style.display = "block";
-  await Promise.all([font(H3.fam, H3.w), ...FAMS.map(f => font(f.id, H3.w))]);
+  await Promise.all([...WEIGHTS.map(([x]) => font(H3.fam, x)), ...FAMS.map(f => font(f.id, H3.w))]);
   h3Apply(); p3.hidden = false;
   try { await loadThree(); await initThree(); } catch (e) { console.warn("three.js 로드 실패", e); }
   flash.style.transition = "opacity 1.4s ease-out"; flash.style.opacity = "0";
@@ -1166,8 +1192,22 @@ function loop(now) {
   drawBg(now);
   beadUpdate(now, dt); drawBeads();
   heroUpdate(dt);
+  placeThemes();
   drawParticles(now);
   requestAnimationFrame(loop);
+}
+// 테마 버튼 위치: 체험 페이지에선 다운로드(OTF) 버튼 바로 왼쪽, 그 밖의 페이지에선 우상단 끝
+const themesEl = $("#themes");
+function placeThemes() {
+  const topVar = W < 700 ? 52 : M + 6, h = themesEl.offsetHeight;
+  let right = M, top = topVar;
+  if (!p2.hidden) {
+    const t = $("#tools").getBoundingClientRect();
+    if (W >= 700) { right = W - t.left + 20; top = t.top + (t.height - h) / 2; }
+    else top = t.bottom + 10;
+  }
+  const v = right.toFixed(1) + "|" + top.toFixed(1);
+  if (v !== themesEl.dataset.pos) { themesEl.dataset.pos = v; themesEl.style.right = right + "px"; themesEl.style.top = top + "px"; }
 }
 addEventListener("resize", () => {
   measure(); sizeHero(); layoutP2();
@@ -1183,12 +1223,12 @@ async function boot() {
   setTheme(saved === "night", true);
   measure();
   // HUD · 리스트에 필요한 폰트 먼저
-  await Promise.all([font("AsceticLine", "Bold"), font("Ascetic", "Light"), font("Ascetic", "ExtraLight"), ...FAMS.map(f => font(f.id, "ExtraLight"))]);
+  await Promise.all([font("Ascetic", "Bold"), font("Ascetic", "Light"), font("Ascetic", "Medium"), font("Ascetic", "ExtraLight"), ...FAMS.map(f => font(f.id, "ExtraLight"))]);
   setSize(64); setItal(0);
   try { G = await (await fetch("glyphs.json")).json(); } catch (e) { console.warn("glyphs.json", e); return; }
   buildHero();
   p1ListPos();
-  state = "p1";
+  state = "p1"; heroBobReset();
   requestAnimationFrame(loop);
 }
 boot();
