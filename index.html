@@ -237,8 +237,8 @@ body:not(.night) #weights button[aria-pressed="true"]::after{background:#000000}
 "use strict";
 const $ = s => document.querySelector(s);
 const PT = 4 / 3;
+// 폰트 리스트 — Ascetic Ascetic은 리스트에 넣지 않고 첫 페이지 좌상단 ASCETIC에만 씁니다
 const FAMS = [
-  { id: "AsceticAscetic", name: "Ascetic Ascetic" },
   { id: "Ascetic", name: "Ascetic" },
   { id: "AsceticStencil", name: "Ascetic Stencil" },
   { id: "AsceticLine", name: "Ascetic Line" },
@@ -572,7 +572,11 @@ function snap(draw, box) {   // 화면 좌표 그대로 오프스크린 캔버�
   const x = c.getContext("2d");
   x.setTransform(DPR, 0, 0, DPR, -box[0] * DPR, -box[1] * DPR);
   x.fillStyle = fg(1); draw(x);
-  return { c, box };
+  // 노이즈를 글자 위에만 뿌리도록, 잉크가 있는 점들을 미리 모아 둠
+  const d = x.getImageData(0, 0, c.width, c.height).data, ink = [], st = Math.max(1, Math.round(DPR * 1.5));
+  for (let yy = 0; yy < c.height; yy += st) for (let xx = 0; xx < c.width; xx += st)
+    if (d[(yy * c.width + xx) * 4 + 3] > 90) ink.push(box[0] + xx / DPR, box[1] + yy / DPR);
+  return { c, box, ink };
 }
 function heroSnap() {
   const r = heroBtn.querySelector("svg").getBoundingClientRect();
@@ -617,18 +621,23 @@ function glitchFrame(x, im, amp, keep, noise) {
     }
     y += sh;
   }
-  // 노이즈: 흩뿌린 픽셀 + 가는 주사선
-  const n = Math.floor(noise * w * h / 180);
-  x.fillStyle = fg(.85);
-  for (let i = 0; i < n; i++) {
-    const s = 1 + Math.random() * 2.2;
-    x.globalAlpha = .25 + Math.random() * .75;
-    x.fillRect(bx0 - 20 + Math.random() * (w + 40), by0 + Math.random() * h, s, s);
-  }
-  const lines = Math.floor(noise * 6);
-  for (let i = 0; i < lines; i++) {
-    x.globalAlpha = .12 + Math.random() * .3;
-    x.fillRect(bx0 - 30 + Math.random() * 40, by0 + Math.random() * h, w * (.3 + Math.random() * .8), 1 + Math.random() * 2);
+  // 노이즈: 글자가 있는 자리에서만 픽셀이 지지지 (글리치로 어긋난 만큼만 살짝 튀어나감)
+  const ink = im.ink, cnt = ink.length / 2;
+  if (cnt) {
+    const n = Math.floor(noise * cnt * .18);
+    x.fillStyle = fg(.9);
+    for (let i = 0; i < n; i++) {
+      const k = (Math.random() * cnt | 0) * 2, s = 1 + Math.random() * 2;
+      x.globalAlpha = .3 + Math.random() * .7;
+      x.fillRect(ink[k] + (Math.random() - .5) * amp * 16, ink[k + 1], s, s);
+    }
+    // 짧게 끊긴 주사선도 글자 획 안에서만
+    const lines = Math.floor(noise * cnt * .004);
+    for (let i = 0; i < lines; i++) {
+      const k = (Math.random() * cnt | 0) * 2;
+      x.globalAlpha = .2 + Math.random() * .4;
+      x.fillRect(ink[k] - 4, ink[k + 1], 6 + Math.random() * 18, 1 + Math.random());
+    }
   }
   x.globalAlpha = 1;
 }
