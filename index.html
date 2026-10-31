@@ -238,12 +238,23 @@ body:not(.night) #weights button[aria-pressed="true"]::after{background:#000000}
 const $ = s => document.querySelector(s);
 const PT = 4 / 3;
 const FAMS = [
+  { id: "AsceticAscetic", name: "Ascetic Ascetic" },
   { id: "Ascetic", name: "Ascetic" },
   { id: "AsceticStencil", name: "Ascetic Stencil" },
   { id: "AsceticLine", name: "Ascetic Line" },
   { id: "AsceticLineStencil", name: "Ascetic Line Stencil" },
 ];
 const WEIGHTS = [["Thin","Thin"],["ExtraLight","Extra Light"],["Light","Light"],["Medium","Medium"],["Bold","Bold"],["ExtraBold","Extra Bold"]];
+// Ascetic Ascetic은 Light · Regular · Bold 3굵기
+const AA = "AsceticAscetic";
+const AA_WEIGHTS = [["Light","Light"],["Regular","Regular"],["Bold","Bold"]];
+const famW = fam => fam === AA ? AA_WEIGHTS : WEIGHTS;
+const listW = fam => fam === AA ? "Light" : "ExtraLight";     // 리스트 기본 굵기
+const emphW = fam => fam === AA ? "Regular" : "Medium";       // 리스트에서 선택 강조 굵기
+function mapW(fam, w) {   // 다른 가족으로 바꿀 때 가장 가까운 굵기로
+  if (fam === AA) return { Thin: "Light", ExtraLight: "Light", Light: "Light", Medium: "Regular", Regular: "Regular", Bold: "Bold", ExtraBold: "Bold" }[w] || "Regular";
+  return w === "Regular" ? "Medium" : w;
+}
 const SIZES = [4,6,8,9,10,11,12,14,16,18,20,24,28,32,36,40,44,48,56,64,72,80,88,96];
 const SPEC = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz","0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"];
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -481,7 +492,7 @@ beadC.addEventListener("pointerup", endHold);
 beadC.addEventListener("pointercancel", endHold);
 beadC.addEventListener("contextmenu", e => e.preventDefault());
 
-/* ---------- 첫 페이지: ASCETIC (스텐실 열림) ---------- */
+/* ---------- 첫 페이지: ASCETIC (Ascetic Ascetic Bold) ---------- */
 let G = null; // glyphs.json
 const heroBtn = $("#hero");
 const heroLetters = [];
@@ -493,35 +504,17 @@ function buildHero() {
   let x = 0;
   const svg = document.createElementNS(SVGNS, "svg");
   word.split("").forEach((ch, i) => {
-    const gd = G.hero[ch];
+    const gd = G.heroAA[ch];
     const g = document.createElementNS(SVGNS, "g");
     g.setAttribute("transform", `translate(${x} 0) scale(1 -1)`);
-    const mid = "mk" + i;
-    const defs = document.createElementNS(SVGNS, "defs");
-    const mask = document.createElementNS(SVGNS, "mask");
-    mask.setAttribute("id", mid); mask.setAttribute("maskUnits", "userSpaceOnUse");
-    for (const [k, v] of [["x", -300], ["y", -500], ["width", gd.adv + 600], ["height", 1800]]) mask.setAttribute(k, v);
-    const wr = document.createElementNS(SVGNS, "rect");
-    for (const [k, v] of [["x", -300], ["y", -500], ["width", gd.adv + 600], ["height", 1800], ["fill", "#fff"]]) wr.setAttribute(k, v);
-    mask.appendChild(wr);
-    const cuts = gd.cuts.map(c => {
-      const p = document.createElementNS(SVGNS, "path");
-      p.setAttribute("d", c.d); p.setAttribute("fill", "#000");
-      p.setAttribute("transform", `translate(${c.cx} 0) scale(0 1) translate(${-c.cx} 0)`);
-      mask.appendChild(p); return { el: p, cx: c.cx };
-    });
-    defs.appendChild(mask); g.appendChild(defs);
     const base = document.createElementNS(SVGNS, "path");
-    base.setAttribute("d", gd.base); base.setAttribute("class", "glyph"); base.setAttribute("mask", `url(#${mid})`);
+    base.setAttribute("d", gd.d); base.setAttribute("class", "glyph");
     g.appendChild(base);
     const hit = document.createElementNS(SVGNS, "rect");
     for (const [k, v] of [["x", 0], ["y", -40], ["width", gd.adv], ["height", 780], ["class", "hit"]]) hit.setAttribute(k, v);
     g.appendChild(hit);
     svg.appendChild(g);
-    const L = { ch, x, adv: gd.adv, g, base, cuts, s: 0, v: 0, target: 0, jolt: 0, jv: 0, dy: 0 };
-    hit.addEventListener("pointerenter", () => { if (state === "p1") { L.target = 1; if (!cuts.length) L.jv = 9; } });
-    hit.addEventListener("pointerleave", () => { L.target = 0; });
-    heroLetters.push(L);
+    heroLetters.push({ ch, x, adv: gd.adv, g, base, dy: 0, d: gd.d });
     x += gd.adv + (i < word.length - 1 ? HERO_TRACK : 0);
   });
   heroAdv = x;
@@ -536,7 +529,7 @@ function sizeHero() {
   svg.setAttribute("width", (heroAdv / 1000 * fs).toFixed(2));
   svg.setAttribute("height", (1.15 * fs).toFixed(2));
   // 대문자 윗선이 화면 여백에 맞도록 위쪽 빈 공간(200/1000em)만큼 끌어올림
-  heroBtn.style.marginTop = (-(900 - 700) / 1000 * fs) + "px";
+  heroBtn.style.marginTop = (-(900 - 712) / 1000 * fs) + "px";
 }
 // 처음 온 사람에게 "만져 보라"는 신호: 접속 3초 뒤 A부터 한 글자씩 위아래로(A~C 한 바퀴 0.6초 = 글자당 약 0.086초), C까지 끝나면 5초 쉬고 반복
 const BOB_DELAY = 3000, BOB_STEP = 600 / 7, BOB_PAUSE = 5000, BOB_H = 110;   // BOB_H: 움직이는 높이(1000 = 글자 크기)
@@ -553,20 +546,8 @@ function heroUpdate(dt) {
     const dy = i === act ? -BOB_H * Math.sin(Math.PI * bp) : 0;
     if (dy !== L.dy) { L.dy = dy; L.g.setAttribute("transform", `translate(${L.x} ${dy.toFixed(2)}) scale(1 -1)`); }
   });
-  for (const L of heroLetters) {
-    // 기계 장갑: 약간 튕기며 열리고 닫히는 스프링
-    const a = 620 * (L.target - L.s) - 24 * L.v;
-    L.v += a * dt; L.s += L.v * dt;
-    if (L.target === 0 && L.s < .002 && Math.abs(L.v) < .01) { L.s = 0; L.v = 0; }
-    const sc = Math.max(0, L.s);
-    for (const c of L.cuts) c.el.setAttribute("transform", `translate(${c.cx} 0) scale(${sc.toFixed(4)} 1) translate(${-c.cx} 0)`);
-    if (!L.cuts.length) { // I는 끊김이 없어 짧게 덜컹
-      const ja = -900 * L.jolt - 30 * L.jv; L.jv += ja * dt; L.jolt += L.jv * dt;
-      L.base.setAttribute("transform", `translate(0 ${(L.jolt * 18).toFixed(2)})`);
-    }
-  }
 }
-heroBtn.addEventListener("click", () => { if (state === "p1") scatter(); });
+heroBtn.addEventListener("click", () => { if (state === "p1") glitchToList(); });
 
 /* ---------- 폰트 리스트 ---------- */
 const list = $("#fontList");
@@ -574,7 +555,7 @@ FAMS.forEach(f => {
   const li = document.createElement("li");
   li.innerHTML = `<button class="item" data-fam="${f.id}"><svg class="arrow" viewBox="0 0 26 12" aria-hidden="true"><path d="M25 6H1.5M6.5 1 1.5 6l5 5"/></svg><span class="name">${f.name}<i class="bl"></i></span></button>`;
   const b = li.firstChild;
-  b.style.fontFamily = ff(f.id, "ExtraLight");
+  b.style.fontFamily = ff(f.id, listW(f.id));
   b.addEventListener("click", () => chooseFont(f.id, b));
   list.appendChild(li);
 });
@@ -583,111 +564,105 @@ function p1ListPos() {
   else { list.style.top = ""; list.style.transform = "translateY(-50%)"; }
 }
 
-/* ---------- 파티클 ---------- */
+/* ---------- 글리치 + 노이즈 전환 (ASCETIC이 깨지며 사라지고, 오른쪽에 리스트가 조립됨) ---------- */
 const fxC = $("#fx"), fX = fxC.getContext("2d");
-function sampleDraw(draw, box, thr, step) {
-  const s = 2, bw = Math.ceil((box[2] - box[0]) * s), bh = Math.ceil((box[3] - box[1]) * s);
-  const c = document.createElement("canvas"); c.width = Math.max(1, bw); c.height = Math.max(1, bh);
-  const x = c.getContext("2d", { willReadFrequently: true });
-  x.setTransform(s, 0, 0, s, -box[0] * s, -box[1] * s);
-  x.fillStyle = "#000"; draw(x);
-  const d = x.getImageData(0, 0, c.width, c.height).data, out = [];
-  const st = Math.max(1, Math.round(step * s));
-  for (let y = 0; y < c.height; y += st) for (let xx = 0; xx < c.width; xx += st) {
-    if (d[(y * c.width + xx) * 4 + 3] > thr) out.push([box[0] + (xx + Math.random()) / s, box[1] + (y + Math.random()) / s]);
-  }
-  return out;
+function snap(draw, box) {   // 화면 좌표 그대로 오프스크린 캔버스에 그려 둠
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.ceil((box[2] - box[0]) * DPR)); c.height = Math.max(1, Math.ceil((box[3] - box[1]) * DPR));
+  const x = c.getContext("2d");
+  x.setTransform(DPR, 0, 0, DPR, -box[0] * DPR, -box[1] * DPR);
+  x.fillStyle = fg(1); draw(x);
+  return { c, box };
 }
-function heroPoints() {
+function heroSnap() {
   const r = heroBtn.querySelector("svg").getBoundingClientRect();
-  const sc = r.width / heroAdv, top = r.top;
-  return sampleDraw(x => {
+  const sc = r.width / heroAdv;
+  return snap(x => {
     for (const L of heroLetters) {
-      x.save(); x.translate(r.left + L.x * sc, top + (900 + (L.dy || 0)) * sc); x.scale(sc, -sc);
-      const gd = G.hero[L.ch];
-      x.fill(new Path2D(L.s > .5 ? gd.sten : gd.base));
-      x.restore();
+      x.save(); x.translate(r.left + L.x * sc, r.top + (900 + (L.dy || 0)) * sc); x.scale(sc, -sc);
+      x.fill(new Path2D(L.d)); x.restore();
     }
-  }, [r.left - 2, r.top - 2, r.right + 2, r.bottom + 2], 100, 1.05);
+  }, [r.left - 4, r.top - 4, r.right + 4, r.bottom + 4]);
 }
-function listPoints() {
+function listSnap() {
   const lr = list.getBoundingClientRect();
-  return sampleDraw(x => {
+  return snap(x => {
     list.querySelectorAll(".item").forEach(b => {
       const nm = b.querySelector(".name"), fam = b.dataset.fam;
       const fs = parseFloat(getComputedStyle(b).fontSize);
       const base = nm.querySelector(".bl").getBoundingClientRect().bottom;
-      x.font = `${fs}px "${fam}-ExtraLight"`;
+      x.font = `${fs}px "${fam}-${listW(fam)}"`;
       const tn = nm.firstChild, range = document.createRange();
       for (let i = 0; i < tn.length; i++) {
         range.setStart(tn, i); range.setEnd(tn, i + 1);
-        const cr = range.getBoundingClientRect();
-        x.fillText(tn.data[i], cr.left, base);
+        x.fillText(tn.data[i], range.getBoundingClientRect().left, base);
       }
     });
-  }, [lr.left - 30, lr.top - 10, lr.right + 10, lr.bottom + 10], 40, .5);
+  }, [lr.left - 40, lr.top - 12, lr.right + 12, lr.bottom + 12]);
 }
-let parts = null;
-async function scatter() {
+// 한 장면: amp = 가로 어긋남 세기, keep = 남아 있는 조각 비율, noise = 노이즈 양
+function glitchFrame(x, im, amp, keep, noise) {
+  const [bx0, by0, bx1, by1] = im.box, w = bx1 - bx0, h = by1 - by0;
+  let y = 0;
+  while (y < h) {
+    const sh = Math.min(h - y, 2 + Math.random() * (amp > .2 ? 26 : 10));
+    if (Math.random() < keep) {
+      const dx = (Math.random() - .5) * 2 * amp * 70 * (Math.random() < .25 ? 2.2 : 1);
+      x.globalAlpha = 1;
+      x.drawImage(im.c, 0, y * DPR, im.c.width, sh * DPR, bx0 + dx, by0 + y, w, sh);
+      if (amp > .05 && Math.random() < .45) {   // 어긋난 잔상 (색수차 대신 단색 고스트)
+        x.globalAlpha = .28;
+        x.drawImage(im.c, 0, y * DPR, im.c.width, sh * DPR, bx0 + dx + (Math.random() < .5 ? -1 : 1) * (6 + amp * 22), by0 + y, w, sh);
+      }
+    }
+    y += sh;
+  }
+  // 노이즈: 흩뿌린 픽셀 + 가는 주사선
+  const n = Math.floor(noise * w * h / 180);
+  x.fillStyle = fg(.85);
+  for (let i = 0; i < n; i++) {
+    const s = 1 + Math.random() * 2.2;
+    x.globalAlpha = .25 + Math.random() * .75;
+    x.fillRect(bx0 - 20 + Math.random() * (w + 40), by0 + Math.random() * h, s, s);
+  }
+  const lines = Math.floor(noise * 6);
+  for (let i = 0; i < lines; i++) {
+    x.globalAlpha = .12 + Math.random() * .3;
+    x.fillRect(bx0 - 30 + Math.random() * 40, by0 + Math.random() * h, w * (.3 + Math.random() * .8), 1 + Math.random() * 2);
+  }
+  x.globalAlpha = 1;
+}
+let gl = null;
+async function glitchToList() {
   state = "busy";
-  for (const L of heroLetters) L.target = 0;
-  await Promise.all(FAMS.map(f => font(f.id, "ExtraLight")));
-  const S = heroPoints();
-  // 리스트를 보이지 않게 배치한 뒤 목표 위치 측정
+  await Promise.all(FAMS.map(f => font(f.id, listW(f.id))));
+  const hero = heroSnap();
+  // 리스트를 보이지 않게 배치한 뒤 그 모양을 그려 둠
   list.classList.remove("docked"); p1ListPos(); list.style.opacity = "0"; list.classList.add("show"); list.style.pointerEvents = "none";
   await new Promise(r => requestAnimationFrame(r));
-  let T = listPoints();
-  const MAXN = 16000;
-  if (T.length > MAXN) { for (let i = T.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [T[i], T[j]] = [T[j], T[i]]; } T.length = MAXN; }
-  T.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
-  S.sort((a, b) => a[0] - b[0]);
-  heroBtn.style.opacity = "0";
-  const n = T.length, sx0 = S[0][0], sx1 = S[S.length - 1][0];
-  const P = new Float32Array(n * 9);
-  for (let i = 0; i < n; i++) {
-    const si = Math.min(S.length - 1, Math.floor((i / n) * S.length * .85 + Math.random() * S.length * .15));
-    const s = S[si], t = T[i], o = i * 9;
-    P[o] = s[0]; P[o + 1] = s[1]; P[o + 2] = t[0]; P[o + 3] = t[1];
-    P[o + 4] = (s[0] - sx0) / Math.max(1, sx1 - sx0) * 520 + Math.random() * 380;   // 지연
-    P[o + 5] = 1500 + Math.random() * 700;                                           // 이동 시간
-    P[o + 6] = Math.random() * 6.283; P[o + 7] = (Math.random() - .5) * 2; P[o + 8] = .7 + Math.random() * .75; // 위상·퍼짐·알갱이 크기
-  }
-  const scale = reduce ? .5 : 1;
-  parts = { P, n, t0: performance.now(), end: 0, scale, fade: 0 };
-  let maxEnd = 0; for (let i = 0; i < n; i++) maxEnd = Math.max(maxEnd, (P[i * 9 + 4] + P[i * 9 + 5]) * scale);
-  parts.end = maxEnd;
+  const lst = listSnap();
+  heroBtn.style.transition = "none"; heroBtn.style.opacity = "0";
+  gl = { hero, lst, t0: performance.now(), dur: reduce ? 500 : 1150 };
 }
-function drawParticles(now) {
+function drawGlitch(now) {
   const x = fX;
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.clearRect(0, 0, fxC.width, fxC.height);
+  if (!gl) return;
   x.setTransform(DPR, 0, 0, DPR, 0, 0);
-  x.clearRect(0, 0, W, H);
-  if (!parts) return;
-  const { P, n, t0, scale } = parts, el = now - t0, time = el / 1000;
-  const alpha = parts.done ? Math.max(0, 1 - (now - parts.done) / 420) : 1;
-  x.fillStyle = fg(.92 * alpha);
-  for (let i = 0; i < n; i++) {
-    const o = i * 9, sx = P[o], sy = P[o + 1], tx = P[o + 2], ty = P[o + 3];
-    const u = clamp((el - P[o + 4] * scale) / (P[o + 5] * scale), 0, 1), e = eio(u), bell = Math.sin(Math.PI * u);
-    const dx = tx - sx, dy = ty - sy;
-    // 3차 베지어: 위로 살짝 떠올랐다가 흘러내리는 물줄기
-    const c1x = sx + dx * .3, c1y = sy + dy * .05 - 60 - 40 * Math.sin(P[o + 6]);
-    const c2x = sx + dx * .72, c2y = sy + dy * .85 + 70;
-    const m = 1 - e;
-    let px = m*m*m*sx + 3*m*m*e*c1x + 3*m*e*e*c2x + e*e*e*tx;
-    let py = m*m*m*sy + 3*m*m*e*c1y + 3*m*e*e*c2y + e*e*e*ty;
-    // 군집 전체가 출렁이는 파동 + 알갱이마다의 흩어짐
-    py += bell * (46 * Math.sin(px * .006 - time * 2.4 + P[o + 6] * .15) + 22 * Math.sin(px * .017 + time * 3.1));
-    px += bell * (18 * Math.sin(py * .011 + time * 2.0) + P[o + 7] * 34);
-    py += bell * P[o + 7] * 26 * Math.cos(P[o + 6]);
-    const z = P[o + 8];
-    x.fillRect(px, py, z, z);
-  }
-  if (!parts.done && el > parts.end) {
-    parts.done = now;
-    list.style.transition = "opacity .35s ease"; list.style.opacity = "1"; list.style.pointerEvents = "";
+  const t = clamp((now - gl.t0) / gl.dur, 0, 1);
+  // ASCETIC: 점점 크게 어긋나며 조각이 빠져 사라짐 (0 ~ 0.62)
+  const p = clamp(t / .62, 0, 1);
+  if (p < 1) glitchFrame(x, gl.hero, .15 + p * 1.1, 1 - Math.pow(p, 1.4), .3 + p * 1.2);
+  // 폰트 리스트: 같은 순간부터 조각이 모이며 어긋남이 줄어듦 (0.06 ~ 1)
+  const q = clamp((t - .06) / .94, 0, 1);
+  if (q > 0) glitchFrame(x, gl.lst, (1 - eo3(q)) * 1.2, Math.pow(q, .8), (1 - q) * 1.3 + .05);
+  if (t >= 1) {
+    gl = null;
+    x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, fxC.width, fxC.height);
+    list.style.transition = "none"; list.style.opacity = "1"; list.style.pointerEvents = "";
     state = "p1list";
   }
-  if (parts.done && now - parts.done > 450) { parts = null; list.style.transition = ""; }
 }
 
 /* ---------- 두 번째 페이지 ---------- */
@@ -695,13 +670,19 @@ const p2 = $("#p2"), p2name = $("#p2name"), specLines = [...document.querySelect
 const cur = { fam: "Ascetic", w: "ExtraLight", size: 64, align: "left", ital: 0 };
 let typeToken = 0;
 const weightsEl = $("#weights");
-WEIGHTS.forEach(([id, label]) => {
-  const b = document.createElement("button");
-  b.textContent = label; b.dataset.w = id; b.setAttribute("aria-pressed", "false");
-  b.addEventListener("click", () => setWeight(id));
-  weightsEl.appendChild(b);
-});
+let weightsFam = null;
+function buildWeights() {   // 가족마다 있는 굵기만 보여줌
+  if (weightsFam === cur.fam) return;
+  weightsFam = cur.fam; weightsEl.innerHTML = "";
+  famW(cur.fam).forEach(([id, label]) => {
+    const b = document.createElement("button");
+    b.textContent = label; b.dataset.w = id; b.setAttribute("aria-pressed", "false");
+    b.addEventListener("click", () => setWeight(id));
+    weightsEl.appendChild(b);
+  });
+}
 function applyFont() {
+  buildWeights();
   const f = ff(cur.fam, cur.w);
   p2name.style.fontFamily = f;
   $("#p2spec").style.fontFamily = f;
@@ -710,7 +691,7 @@ function applyFont() {
   tester.style.fontVariationSettings = `"slnt" ${(-10 * cur.ital).toFixed(2)}`;
   weightsEl.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.w === cur.w)));
   // 체험 페이지 우하단 리스트: 고른 폰트만 Medium으로 굵게
-  list.querySelectorAll(".item").forEach(b => { const on = b.dataset.fam === cur.fam; b.classList.toggle("current", on); b.style.fontFamily = ff(b.dataset.fam, on ? "Medium" : "ExtraLight"); });
+  list.querySelectorAll(".item").forEach(b => { const on = b.dataset.fam === cur.fam; b.classList.toggle("current", on); b.style.fontFamily = ff(b.dataset.fam, on ? emphW(b.dataset.fam) : listW(b.dataset.fam)); });
   fitTester();
 }
 // 입력 커서가 세로 중앙에 오도록: 글 높이만큼만 textarea를 키우고 상자 안에서 세로 가운데 정렬
@@ -787,7 +768,7 @@ const ital2 = makeSlider($("#slider"), v => { cur.ital = v; tester.style.fontVar
 function setItal(v) { ital2.set(v); }
 
 // 다운로드: 선택한 폰트의 OTF 12종(6굵기 × 정체·이탤릭)을 zip 하나로 묶어 저장
-const DL = { Ascetic: "Ascetic", AsceticStencil: "Ascetic_Stencil", AsceticLine: "Ascetic_Line", AsceticLineStencil: "Ascetic_Line_Stencil" };
+const DL = { AsceticAscetic: "Ascetic_Ascetic", Ascetic: "Ascetic", AsceticStencil: "Ascetic_Stencil", AsceticLine: "Ascetic_Line", AsceticLineStencil: "Ascetic_Line_Stencil" };
 const dlBtn = $("#dlBtn"); let dlNS = null, dlBusy = false;
 (async () => {
   try { dlNS = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch (e) { dlNS = null; }
@@ -817,7 +798,8 @@ dlBtn.addEventListener("click", async () => {
   dlBusy = true; dlBtn.classList.add("busy");
   try {
     const fam = cur.fam, nm = DL[fam];
-    const files = WEIGHTS.flatMap(([w]) => [`${fam}-${w}.otf`, `${fam}-${w}Italic.otf`]);
+    const files = fam === AA ? ["Light", "LightItalic", "Regular", "Italic", "Bold", "BoldItalic"].map(v => `${AA}-${v}.otf`)
+      : WEIGHTS.flatMap(([w]) => [`${fam}-${w}.otf`, `${fam}-${w}Italic.otf`]);
     const datas = await Promise.all(files.map(f => fetch("otf/" + f).then(r => { if (!r.ok) throw new Error(f); return r.arrayBuffer(); })));
     const zip = makeZip(files.map((f, i) => ({ name: `${nm}_OTF/${f}`, data: new Uint8Array(datas[i]) })));
     if (dlNS) await dlNS.save({ filename: `${nm}_OTF.zip`, data: zip });
@@ -867,8 +849,8 @@ async function chooseFont(fam, btn) {
   state = "busy";
   btn.classList.add("press"); await wait(130);
   btn.classList.remove("press"); btn.classList.add("held"); await wait(170);
-  cur.fam = fam;
-  await Promise.all(WEIGHTS.map(([w]) => font(fam, w)));
+  cur.fam = fam; cur.w = mapW(fam, cur.w);
+  await Promise.all([...famW(fam).map(([w]) => font(fam, w)), font(fam, emphW(fam))]);
   const famObj = FAMS.find(f => f.id === fam);
   const nameEl = btn.querySelector(".name");
   const fr = nameEl.getBoundingClientRect();
@@ -921,7 +903,7 @@ async function goHome() {
 function resetP1() {
   p2.hidden = true; p2name.style.opacity = ""; p2name.style.transition = "";
   list.classList.remove("show", "docked"); list.style.transition = ""; list.style.opacity = ""; list.style.pointerEvents = ""; p1ListPos();
-  list.querySelectorAll(".item").forEach(b => { b.classList.remove("current", "held", "press"); b.style.fontFamily = ff(b.dataset.fam, "ExtraLight"); });
+  list.querySelectorAll(".item").forEach(b => { b.classList.remove("current", "held", "press"); b.style.fontFamily = ff(b.dataset.fam, listW(b.dataset.fam)); });
   tester.value = ""; setItal(0); setSize(64); fitTester();
   for (const L of heroLetters) { L.s = 0; L.v = 0; L.target = 0; }
   heroBtn.style.transition = "opacity .6s ease"; heroBtn.style.opacity = "1";
@@ -941,22 +923,28 @@ function loadG3d(fam, w) {
 }
 // 히든 페이지 UI: 굵기(16pt) 위 · 폰트 종류(24pt) 아래, 가로 정렬
 const h3w = $("#h3weights"), h3f = $("#h3fams");
-WEIGHTS.forEach(([id, label]) => {
-  const b = document.createElement("button"); b.textContent = label; b.dataset.w = id;
-  b.addEventListener("click", () => h3Set(H3.fam, id)); h3w.appendChild(b);
-});
+let h3wFam = null;
+function h3BuildWeights() {
+  if (h3wFam === H3.fam) return;
+  h3wFam = H3.fam; h3w.innerHTML = "";
+  famW(H3.fam).forEach(([id, label]) => {
+    const b = document.createElement("button"); b.textContent = label; b.dataset.w = id;
+    b.addEventListener("click", () => h3Set(H3.fam, id)); h3w.appendChild(b);
+  });
+}
 FAMS.forEach(f => {
   const b = document.createElement("button"); b.textContent = f.name; b.dataset.fam = f.id;
   b.addEventListener("click", () => h3Set(f.id, H3.w)); h3f.appendChild(b);
 });
 function h3Apply() {
+  h3BuildWeights();
   h3w.querySelectorAll("button").forEach(b => b.style.fontFamily = ff(H3.fam, b.dataset.w));
   h3w.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.w === H3.w)));
-  h3f.querySelectorAll("button").forEach(b => { b.style.fontFamily = ff(b.dataset.fam, H3.w); b.setAttribute("aria-pressed", String(b.dataset.fam === H3.fam)); });
+  h3f.querySelectorAll("button").forEach(b => { b.style.fontFamily = ff(b.dataset.fam, mapW(b.dataset.fam, H3.w)); b.setAttribute("aria-pressed", String(b.dataset.fam === H3.fam)); });
 }
 async function h3Set(fam, w) {
-  H3.fam = fam; H3.w = w;
-  await Promise.all([...WEIGHTS.map(([x]) => font(fam, x)), ...FAMS.map(f => font(f.id, w))]);
+  H3.fam = fam; H3.w = mapW(fam, w);
+  await Promise.all([...famW(fam).map(([x]) => font(fam, x)), ...FAMS.map(f => font(f.id, mapW(f.id, H3.w)))]);
   h3Apply();
   if (T3) await T3.setFont(fam, w);
   hidIn.focus({ preventScroll: true });
@@ -988,7 +976,7 @@ async function enterHidden() {
   list.classList.remove("show"); list.style.opacity = "0";
   bgC.style.opacity = ".5";
   threeBox.style.display = "block";
-  await Promise.all([...WEIGHTS.map(([x]) => font(H3.fam, x)), ...FAMS.map(f => font(f.id, H3.w))]);
+  await Promise.all([...famW(H3.fam).map(([x]) => font(H3.fam, x)), ...FAMS.map(f => font(f.id, mapW(f.id, H3.w)))]);
   h3Apply(); p3.hidden = false;
   try { await loadThree(); await initThree(); } catch (e) { console.warn("three.js 로드 실패", e); }
   flash.style.transition = "opacity 1.4s ease-out"; flash.style.opacity = "0";
@@ -1193,7 +1181,7 @@ function loop(now) {
   beadUpdate(now, dt); drawBeads();
   heroUpdate(dt);
   placeThemes();
-  drawParticles(now);
+  drawGlitch(now);
   requestAnimationFrame(loop);
 }
 // 테마 버튼 위치: 체험 페이지에선 다운로드(OTF) 버튼 바로 왼쪽, 그 밖의 페이지에선 우상단 끝
@@ -1223,7 +1211,7 @@ async function boot() {
   setTheme(saved === "night", true);
   measure();
   // HUD · 리스트에 필요한 폰트 먼저
-  await Promise.all([font("Ascetic", "Bold"), font("Ascetic", "Light"), font("Ascetic", "Medium"), font("Ascetic", "ExtraLight"), ...FAMS.map(f => font(f.id, "ExtraLight"))]);
+  await Promise.all([font("Ascetic", "Bold"), font("Ascetic", "Light"), font("Ascetic", "Medium"), font("Ascetic", "ExtraLight"), ...FAMS.map(f => font(f.id, listW(f.id)))]);
   setSize(64); setItal(0);
   try { G = await (await fetch("glyphs.json")).json(); } catch (e) { console.warn("glyphs.json", e); return; }
   buildHero();
